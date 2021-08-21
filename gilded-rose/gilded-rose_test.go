@@ -1,18 +1,21 @@
 package main
+
 import (
 	"reflect"
 	"testing"
+
 	"github.com/kr/pretty"
 )
+
 func TestSomething(t *testing.T) {
 	cases := []struct {
-		name string
-		inputs []*Item
+		name    string
+		inputs  []*Item
 		outputs []*Item
 	}{
 		{
-			name: "#1",
-			inputs: []*Item{{"+5 Dexterity Vest", 10, 20}},
+			name:    "#1",
+			inputs:  []*Item{{"+5 Dexterity Vest", 10, 20}},
 			outputs: []*Item{{"+5 Dexterity Vest", 10 - 1, 20 - 1}}},
 		{name: "#2", inputs: []*Item{{"Aged Brie", 2, 0}}, outputs: []*Item{{"Aged Brie", 2 - 1, 1}}},
 		{name: "#2.2", inputs: []*Item{{"Aged Brie", 1, 0}}, outputs: []*Item{{"Aged Brie", 0, 1}}},
@@ -24,6 +27,10 @@ func TestSomething(t *testing.T) {
 		{name: "#7", inputs: []*Item{{"Backstage passes to a TAFKAL80ETC concert", 10, 49}}, outputs: []*Item{{"Backstage passes to a TAFKAL80ETC concert", 10 - 1, 50}}},
 		{name: "#8", inputs: []*Item{{"Backstage passes to a TAFKAL80ETC concert", 5, 49}}, outputs: []*Item{{"Backstage passes to a TAFKAL80ETC concert", 5 - 1, 50}}},
 		//{name: "#9",inputs: []*Item{{"Conjured Mana Cake", 3, 6}}, outputs: []*Item{{"Conjured Mana Cake", 3-1, 6-2}}}, // TODO: implement new requirement
+		{name: "#10", inputs: []*Item{{"Backstage passes to a TAFKAL80ETC concert", 10, 48}}, outputs: []*Item{{"Backstage passes to a TAFKAL80ETC concert", 10 - 1, 48 + 2}}},
+		{name: "#11", inputs: []*Item{{"Backstage passes to a TAFKAL80ETC concert", 5, 47}}, outputs: []*Item{{"Backstage passes to a TAFKAL80ETC concert", 5 - 1, 47 + 3}}},
+		{name: "#12", inputs: []*Item{{"Some Powerful Item", -1, 80}}, outputs: []*Item{{"Some Powerful Item", -2, 78}}},
+		{name: "#13", inputs: []*Item{{"Backstage passes to a TAFKAL80ETC concert", -1, 47}}, outputs: []*Item{{"Backstage passes to a TAFKAL80ETC concert", -2, 0}}},
 	}
 	for _, c := range cases {
 		UpdateQuality(c.inputs)
