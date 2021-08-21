@@ -51,11 +51,7 @@ func statement(invoice Invoice, plays Plays) string {
 		totalAmount += amountFor(play, perf)
 
 		// add volume credits
-		volumeCredits += math.Max(float64(perf.Audience-30), 0)
-		// add extra credit for every ten comedy attendees
-		if "comedy" == play.Type {
-			volumeCredits += math.Floor(float64(perf.Audience / 5))
-		}
+		volumeCredits += volumeCreditsFor(perf, play)
 
 		// print line for this order
 		result += fmt.Sprintf("  %s: $%.2f (%d seats)\n", play.Name, amountFor(play, perf)/100, perf.Audience)
@@ -63,6 +59,15 @@ func statement(invoice Invoice, plays Plays) string {
 	result += fmt.Sprintf("Amount owed is $%.2f\n", totalAmount/100)
 	result += fmt.Sprintf("you earned %.0f credits\n", volumeCredits)
 	return result
+}
+
+func volumeCreditsFor(perf Performance, play Play) float64 {
+	// add extra credit for every ten comedy attendees
+	extraCredit := math.Max(float64(perf.Audience-30), 0)
+	if "comedy" == play.Type {
+		extraCredit += math.Floor(float64(perf.Audience / 5))
+	}
+	return extraCredit
 }
 
 func main() {
@@ -73,7 +78,7 @@ func main() {
 			{PlayID: "as-like", Audience: 35},
 			{PlayID: "othello", Audience: 40},
 		}}
-	plays := map[string]Play{
+	plays := Plays{
 		"hamlet":  {Name: "Hamlet", Type: "tragedy"},
 		"as-like": {Name: "As You Like It", Type: "comedy"},
 		"othello": {Name: "Othello", Type: "tragedy"},
