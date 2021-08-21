@@ -21,6 +21,25 @@ type Invoice struct {
 	Performances []Performance `json:"performances"`
 }
 
+func amountFor(play Play,perf Performance) (amount float64){
+	switch play.Type {
+	case "tragedy":
+		amount = 40000
+		if perf.Audience > 30 {
+			amount += 1000 * (float64(perf.Audience - 30))
+		}
+	case "comedy":
+		amount = 30000
+		if perf.Audience > 20 {
+			amount += 10000 + 500*(float64(perf.Audience-20))
+		}
+		amount += 300 * float64(perf.Audience)
+	default:
+		panic(fmt.Sprintf("unknow type: %s", play.Type))
+	}
+	return amount
+}
+
 func statement(invoice Invoice, plays Plays) string {
 	totalAmount := 0.0
 	volumeCredits := 0.0
@@ -28,23 +47,8 @@ func statement(invoice Invoice, plays Plays) string {
 
 	for _, perf := range invoice.Performances {
 		play := plays[perf.PlayID]
-		thisAmount := 0.0
 
-		switch play.Type {
-		case "tragedy":
-			thisAmount = 40000
-			if perf.Audience > 30 {
-				thisAmount += 1000 * (float64(perf.Audience - 30))
-			}
-		case "comedy":
-			thisAmount = 30000
-			if perf.Audience > 20 {
-				thisAmount += 10000 + 500*(float64(perf.Audience-20))
-			}
-			thisAmount += 300 * float64(perf.Audience)
-		default:
-			panic(fmt.Sprintf("unknow type: %s", play.Type))
-		}
+		totalAmount += amountFor(play, perf)
 
 		// add volume credits
 		volumeCredits += math.Max(float64(perf.Audience-30), 0)
@@ -54,8 +58,7 @@ func statement(invoice Invoice, plays Plays) string {
 		}
 
 		// print line for this order
-		result += fmt.Sprintf("  %s: $%.2f (%d seats)\n", play.Name, thisAmount/100, perf.Audience)
-		totalAmount += thisAmount
+		result += fmt.Sprintf("  %s: $%.2f (%d seats)\n", play.Name, amountFor(play, perf)/100, perf.Audience)
 	}
 	result += fmt.Sprintf("Amount owed is $%.2f\n", totalAmount/100)
 	result += fmt.Sprintf("you earned %.0f credits\n", volumeCredits)
