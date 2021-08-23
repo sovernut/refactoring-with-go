@@ -6,8 +6,8 @@ import (
 )
 
 type Play struct {
-	Name string
-	Type string
+	name string
+	kind string
 }
 
 type Plays map[string]Play
@@ -22,96 +22,106 @@ type Invoice struct {
 	Performances []Performance `json:"performances"`
 }
 
-func amountFor(play Play, perf Performance) (result float64) {
-	switch play.Type {
-	case "tragedy":
-		result = 40000
-		if perf.Audience > 30 {
-			result += 1000 * (float64(perf.Audience - 30))
-		}
-	case "comedy":
-		result = 30000
-		if perf.Audience > 20 {
-			result += 10000 + 500*(float64(perf.Audience-20))
-		}
-		result += 300 * float64(perf.Audience)
-	default:
-		panic(fmt.Sprintf("unknow type: %s", play.Type))
-	}
-	return result
-}
-
-func volumeCreditsFor(play Play, perf Performance) float64 {
-	result := math.Max(float64(perf.Audience-30), 0)
-
-	// add extra credit for every ten comedy attendees
-	if "comedy" == play.Type {
-		result += math.Floor(float64(perf.Audience / 5))
-	}
-
-	return result
-}
-
-func totalVolumeCreditsFor(performances []Performance, plays Plays) float64 {
+func totalAmount(rates []Rate) float64 {
 	result := 0.0
-	for _, perf := range performances {
-		play := plays[perf.PlayID]
-		result += volumeCreditsFor(play, perf)
+	for _, r := range rates {
+		result += r.amount
 	}
 	return result
-}
-
-func totalAmountFor(performances []Performance, plays Plays) float64 {
-	var result float64
-	for _, perf := range performances {
-		play := plays[perf.PlayID]
-		result += amountFor(play, perf)
-	}
-	return result
-}
-
-type Bill struct {
-	Customer           string
-	TotalAmount        float64
-	TotalVolumeCredits float64
-	Rates              []Rate
-}
-
-type Rate struct {
-	Name     string
-	Amount   float64
-	Audience int
-}
-
-func ratesFor(performances []Performance, plays Plays) []Rate {
-	var rates []Rate
-	for _, perf := range performances {
-		play := plays[perf.PlayID]
-		rate := Rate{
-			Name:     play.Name,
-			Amount:   amountFor(play, perf),
-			Audience: perf.Audience,
-		}
-		rates = append(rates, rate)
-	}
-	return rates
 }
 
 func statement(invoice Invoice, plays Plays) string {
-	// print bill -- presenter
-	bill := Bill{
-		Customer:           invoice.Customer,
-		TotalAmount:        totalAmountFor(invoice.Performances, plays),
-		TotalVolumeCredits: totalVolumeCreditsFor(invoice.Performances, plays),
-		Rates:              ratesFor(invoice.Performances, plays),
+	var rates []Rate
+	for _, perf := range invoice.Performances {
+		audience := perf.Audience
+		play := playFor(plays, perf)
+		amount := play.amountFor(audience)
+		credits := play.volumeCreditsFor(audience)
+		rates = append(rates, Rate{play: play, amount: amount, audience: audience, credits: credits})
 	}
 
-	result := fmt.Sprintf("Statement for %s\n", bill.Customer)
-	for _, r := range bill.Rates {
-		result += fmt.Sprintf("  %s: $%.2f (%d seats)\n", r.Name, r.Amount/100, r.Audience)
+	bill := Bill{
+		customer:           invoice.Customer,
+		rates:              rates,
+		totalAmount:        totalAmount(rates),
+		totalVolumeCredits: totalVolumeCredits(rates),
 	}
-	result += fmt.Sprintf("Amount owed is $%.2f\n", bill.TotalAmount/100)
-	result += fmt.Sprintf("you earned %.0f credits\n", bill.TotalVolumeCredits)
+
+	return renderPlainText(bill)
+}
+
+type Rate struct {
+	play     Play
+	amount   float64
+	audience int
+	credits  float64
+}
+
+type Bill struct {
+	customer           string
+	rates              []Rate
+	totalAmount        float64
+	totalVolumeCredits float64
+}
+
+func renderPlainText(bill Bill) string {
+	result := fmt.Sprintf("Statement for %s\n", bill.customer)
+	for _, r := range bill.rates {
+		result += fmt.Sprintf("  %s: $%.2f (%d seats)\n", r.play.name, r.amount/100, r.audience)
+	}
+	result += fmt.Sprintf("Amount owed is $%.2f\n", bill.totalAmount/100)
+	result += fmt.Sprintf("you earned %.0f credits\n", bill.totalVolumeCredits)
+	return result
+}
+
+func totalVolumeCredits(rates []Rate) (result float64) {
+	for _, r := range rates {
+		result += r.credits
+	}
+	return
+}
+
+type Player interface {
+	volumeCreditsFor(audience int) float64
+	amountFor(audience int) float64
+}
+
+// type comedy
+// type tragedy
+
+func (play Play) volumeCreditsFor(audience int) float64 {
+	volumeCredits := 0.0
+	// add volume credits
+	volumeCredits += math.Max(float64(audience-30), 0)
+	// add extra credit for every ten comedy attendees
+	if "comedy" == play.kind {
+		volumeCredits += math.Floor(float64(audience / 5))
+	}
+	return volumeCredits
+}
+
+func playFor(plays Plays, perf Performance) Play {
+	return plays[perf.PlayID]
+}
+
+func (play Play) amountFor(audience int) float64 {
+	result := 0.0
+	switch play.kind {
+	case "tragedy":
+		result = 40000
+		if audience > 30 {
+			result += 1000 * (float64(audience - 30))
+		}
+	case "comedy":
+		result = 30000
+		if audience > 20 {
+			result += 10000 + 500*(float64(audience-20))
+		}
+		result += 300 * float64(audience)
+	default:
+		panic(fmt.Sprintf("unknow type: %s", play.kind))
+	}
+
 	return result
 }
 
@@ -123,12 +133,12 @@ func main() {
 			{PlayID: "as-like", Audience: 35},
 			{PlayID: "othello", Audience: 40},
 		}}
-	plays := Plays{
-		"hamlet":  {Name: "Hamlet", Type: "tragedy"},
-		"as-like": {Name: "As You Like It", Type: "comedy"},
-		"othello": {Name: "Othello", Type: "tragedy"},
+	_plays := map[string]Play{
+		"hamlet":  {name: "Hamlet", kind: "tragedy"},
+		"as-like": {name: "As You Like It", kind: "comedy"},
+		"othello": {name: "Othello", kind: "tragedy"},
 	}
 
-	bill := statement(inv, plays)
+	bill := statement(inv, _plays)
 	fmt.Println(bill)
 }
