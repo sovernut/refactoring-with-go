@@ -1,66 +1,55 @@
 package main
-
 type Item struct {
-	name            string
+	name string
 	sellIn, quality int
 }
-
-func isIn(name string, items []string) bool {
-	for _, item := range items {
-		if name == item {
-			return true
-		}
-	}
-	return false
-}
-
-func increaseQuality(item *Item) {
-	if item.quality < 50 {
-		item.quality++
-	}
-}
-
-func decreaseQuality(item *Item) {
-	if item.quality > 0 {
-		item.quality--
-	}
-}
-
 func UpdateQuality(items []*Item) {
 	for i := 0; i < len(items); i++ {
-
-		if isIn(items[i].name, []string{"Aged Brie", "Backstage passes to a TAFKAL80ETC concert", "Sulfuras, Hand of Ragnaros"}) {
-			increaseQuality(items[i])
+		item := items[i]
+		if item.name == "Aged Brie" {
+			if item.quality < 50 {
+				item.quality = item.quality + 1
+			}
+		} else if item.name == "Backstage passes to a TAFKAL80ETC concert" {
+			if item.quality < 50 {
+				item.quality = item.quality + 1
+			}
+			if item.sellIn < 11 {
+				if item.quality < 50 {
+					item.quality = item.quality + 1
+				}
+			}
+			if item.sellIn < 6 {
+				if item.quality < 50 {
+					item.quality = item.quality + 1
+				}
+			}
 		} else {
-			decreaseQuality(items[i])
-		}
-
-		if items[i].name == "Backstage passes to a TAFKAL80ETC concert" && items[i].quality < 50 {
-			if items[i].sellIn < 11 {
-				items[i].quality++
-			}
-			if items[i].sellIn < 6 {
-				items[i].quality++
+			if item.quality > 0 {
+				if item.name != "Sulfuras, Hand of Ragnaros" {
+					item.quality = item.quality - 1
+				}
 			}
 		}
-
-		if items[i].name != "Sulfuras, Hand of Ragnaros" {
-			items[i].sellIn--
+		if item.name != "Sulfuras, Hand of Ragnaros" {
+			item.sellIn = item.sellIn - 1
 		}
-
-		if items[i].sellIn < 0 {
-			if items[i].name == "Backstage passes to a TAFKAL80ETC concert" {
-				items[i].quality = 0
-				continue
+		if item.sellIn < 0 {
+			if item.name != "Aged Brie" {
+				if item.name == "Backstage passes to a TAFKAL80ETC concert" {
+					item.quality = item.quality - item.quality
+				} else {
+					if item.quality > 0 {
+						if item.name != "Sulfuras, Hand of Ragnaros" {
+							item.quality = item.quality - 1
+						}
+					}
+				}
+			} else {
+				if item.quality < 50 {
+					item.quality = item.quality + 1
+				}
 			}
-
-			if isIn(items[i].name, []string{"Aged Brie", "Sulfuras, Hand of Ragnaros"}) {
-				increaseQuality(items[i])
-				continue
-			}
-
-			decreaseQuality(items[i])
 		}
 	}
-
 }
