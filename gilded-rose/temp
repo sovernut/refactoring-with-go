@@ -1,0 +1,95 @@
+package main
+type Item struct {
+ name string
+ sellIn, quality int
+}
+func quality(it Item, q int) Item {
+ it.quality = it.quality + q
+ if it.quality > 50 {
+ it.quality = 50
+ return it
+ }
+ if it.quality < 0 {
+ it.quality = 0
+ return it
+ }
+ return it
+}
+type AgedBrie struct {
+ item Item
+}
+func (ab AgedBrie) updateQuality() Item {
+ return quality(ab.item, +1)
+}
+func (ab AgedBrie) updateSellIn(item Item) Item {
+ item.sellIn = item.sellIn - 1
+ return item
+}
+func (ab AgedBrie) overDeal(item Item) Item {
+ if item.sellIn < 0 {
+ item = quality(item, +1)
+ }
+ return item
+}
+func upQ(ab AgedBrie) Item {
+ it := ab.updateQuality()
+ it = ab.updateSellIn(it)
+ it = ab.overDeal(it)
+ return it
+}
+//it:= ab.updateQuality()
+//it = ab.updateSellIn(it)
+//it = ab.overDeal(it)
+func updateQuality(item Item) Item {
+ // updateQuality
+ switch item.name {
+ case "Backstage passes to a TAFKAL80ETC concert":
+ if item.sellIn > 10 {
+ item = quality(item, +1)
+ }
+ if item.sellIn > 5 && item.sellIn <= 10 {
+ item = quality(item, +2)
+ }
+ if item.sellIn >= 0 && item.sellIn <= 5 {
+ item = quality(item, +3)
+ }
+ default:
+ item = quality(item, -1)
+ }
+ // updateSellIn
+ item.sellIn = item.sellIn - 1
+ // Over Deal
+ if item.sellIn < 0 {
+ switch item.name {
+ case "Backstage passes to a TAFKAL80ETC concert":
+ item.quality = item.quality - item.quality
+ default:
+ item = quality(item, -1)
+ }
+ }
+ return item
+}
+func UpdateQuality(items []*Item) {
+ for i := 0; i < len(items); i++ {
+ item := items[i]
+ if item.name == "Sulfuras, Hand of Ragnaros" {
+ continue
+ }
+ switch item.name {
+ case "Aged Brie":
+ it := upQ(AgedBrie{item: *item})
+ items[i] = &Item{
+ name: it.name,
+ quality: it.quality,
+ sellIn: it.sellIn,
+ }
+ default:
+ it := updateQuality(*item)
+ items[i] = &Item{
+ name: it.name,
+ quality: it.quality,
+ sellIn: it.sellIn,
+ }
+ }
+ }
+}
